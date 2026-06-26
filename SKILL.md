@@ -39,19 +39,18 @@ otn-alarm-tool/
 │   ├── store/useAppStore.ts     # Zustand 全局状态管理
 │   ├── db/index.ts              # IndexedDB 持久化封装
 │   ├── pages/
-│   │   ├── Dashboard.tsx        # 仪表盘
-│   │   ├── Topology.tsx         # 拓扑视图（34省）
-│   │   ├── AlarmAnalysis.tsx    # 告警分析（聚合/明细）
-│   │   ├── Import.tsx           # 数据导入（告警/网元双模式）
-│   │   ├── Report.tsx           # 报表
+│   │   ├── Dashboard.tsx        # 仪表盘（含告警风暴Top10、省份统计）
+│   │   ├── Topology.tsx         # 拓扑视图（34省省级/站点级两级下钻）
+│   │   ├── AlarmAnalysis.tsx    # 告警分析（聚合/明细+根因时间线）
+│   │   ├── Import.tsx           # 数据导入（告警/网元双模式切换）
+│   │   ├── Report.tsx           # 报表（汇总+巡检+Excel导出）
 │   │   └── Projects.tsx         # 项目管理
 │   ├── components/
-│   │   ├── AlarmStormCard.tsx   # 告警风暴Top10
-│   │   ├── AlarmTimeline.tsx    # 根因时间线
-│   │   └── BoardFlashCard.tsx   # 高频闪告单盘
+│   │   ├── AlarmStormCard.tsx   # 告警风暴Top10（最近5000条聚合）
+│   │   ├── AlarmTimeline.tsx    # 根因传播链时间线可视化
+│   │   └── Layout.tsx           # 全局布局+导航栏
 │   ├── utils/
-│   │   ├── alarmAggregator.ts   # 根因聚合算法（OTN分层传播模型）
-│   │   └── boardAggregator.ts   # 单盘闪告聚合算法
+│   │   └── alarmAggregator.ts   # 根因聚合算法（OTN分层传播模型+_quickMode）
 │   └── data/
 │       ├── mockData.ts          # 预置演示数据
 │       ├── neProvinceMap.ts     # 2469条NE→省份映射
@@ -61,11 +60,16 @@ otn-alarm-tool/
 │   └── preload.cjs             # IPC 桥接
 ├── scripts/
 │   ├── fix-build.js            # file://协议兼容处理
+│   ├── genSystemMap.cjs        # 传输系统映射生成脚本
 │   ├── server.js               # 零依赖 HTTP 服务器
 │   └── verify-build.js         # 构建自动验证
 ├── docs/
 │   ├── system_design.md        # 系统设计文档
-│   └── module-arch-design.md   # 模块化架构设计
+│   ├── module-arch-design.md   # 模块化架构设计
+│   ├── 用户操作手册.md          # 用户操作手册
+│   ├── 详细设计文档.md          # 详细设计文档
+│   ├── class-diagram.mermaid   # 类型图（Mermaid）
+│   └── sequence-diagram.mermaid# 时序图（Mermaid）
 ├── package.json
 ├── vite.config.ts
 └── tsconfig.json
@@ -138,8 +142,8 @@ npm run electron:build # 打包为 EXE 安装包
 
 ### 4. 高频闪告单盘定位
 
-- 按 `neName::slotNo::boardName` 聚合
-- 统计闪告频次、紧急/主要数、告警种类数、平均间隔
+- 基于 Dashboard 聚合统计，按 `neName::slotNo::boardName` 分组
+- 统计闪告频次、紧急/主要数、告警种类数
 - Top10 排名展示
 
 ### 5. 报表
@@ -159,6 +163,7 @@ npm run electron:build # 打包为 EXE 安装包
 新增厂商/数据源只需实现 DataSourceAdapter 接口：
 
 ```typescript
+// src/core/adapter.ts
 interface DataSourceAdapter {
   vendor: string;
   name: string;
@@ -168,6 +173,7 @@ interface DataSourceAdapter {
   autoDetectMapping(headers: string[], type: 'alarm' | 'ne'): FieldMapping[];
   getProvinces(): ProvinceCoord[];
   resolveProvince?(neName: string): string | undefined;
+  resolveTransportSystems?(neName: string): string[] | undefined;
 }
 ```
 
