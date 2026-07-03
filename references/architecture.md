@@ -86,11 +86,17 @@ XLS文件 → FileReader/Uint8Array → XLSX.read()
 
 ```
 networkElements → 提取省份列表(去重)
-  → 匹配 PROVINCE_COORDS → 生成 ReactFlow nodes
+  → 匹配 PROVINCE_COORDS → 生成 ReactFlow nodes（一级：省级总览）
   → ProvinceNode(isActive判断)
   → 跨省链路生成
-  → ReactFlow 渲染
-```
+  → 点击省份 → 二级：城市级别
+     → 从 prefectureCities.ts 加载省份地市列表
+     → 城市节点 isActive 判断（neCount > 0 → 点亮/灰选）
+     → normalizeCityName 归一化匹配
+     → 城市间连线从 NE 级链路聚合生成
+     → 点击城市 → 三级：网元级别
+        → 展示该城市内具体网元及告警统计
+  → ReactFlow 渲染（useEffect 同步 useNodesState）
 
 ## 关键性能设计
 
