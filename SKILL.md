@@ -34,13 +34,15 @@ otn-alarm-tool/
 │   │   ├── adapter.ts           # DataSourceAdapter 接口
 │   │   └── registry.ts          # 数据源注册表单例
 │   ├── adapters/
-│   │   └── fibrehome-adapter.ts # 烽火适配器（字段映射+坐标+NE映射）
+│   │   ├── fibrehome-adapter.ts # 烽火适配器（字段映射+坐标+NE映射）
+│   │   └── index.ts             # 适配器导出
 │   ├── types/index.ts           # 原有类型定义（含 @deprecated 标记）
+│   ├── theme.ts                 # MUI 暗色主题配置
 │   ├── store/useAppStore.ts     # Zustand 全局状态管理
 │   ├── db/index.ts              # IndexedDB 持久化封装
 │   ├── pages/
 │   │   ├── Dashboard.tsx        # 仪表盘（含告警风暴Top10、省份统计）
-│   │   ├── Topology.tsx         # 拓扑视图（34省省级/站点级两级下钻）
+│   │   ├── Topology.tsx         # 拓扑视图（34省省份→城市→网元三级下钻）
 │   │   ├── AlarmAnalysis.tsx    # 告警分析（聚合/明细+根因时间线）
 │   │   ├── Import.tsx           # 数据导入（告警/网元双模式切换）
 │   │   ├── Report.tsx           # 报表（汇总+巡检+Excel导出）
@@ -52,9 +54,10 @@ otn-alarm-tool/
 │   ├── utils/
 │   │   └── alarmAggregator.ts   # 根因聚合算法（OTN分层传播模型+_quickMode）
 │   └── data/
-│       ├── mockData.ts          # 预置演示数据
+│       ├── mockData.ts          # 预置演示数据（50条告警+32网元+10省）
 │       ├── neProvinceMap.ts     # 2469条NE→省份映射
-│       └── neSystemMap.ts       # 905条NE→传输系统映射
+│       ├── neSystemMap.ts       # 905条NE→传输系统映射
+│       └── prefectureCities.ts  # 全国34省~290地市预定义列表
 ├── electron/
 │   ├── main.cjs                # Electron 主进程
 │   └── preload.cjs             # IPC 桥接
@@ -72,7 +75,10 @@ otn-alarm-tool/
 │   └── sequence-diagram.mermaid# 时序图（Mermaid）
 ├── package.json
 ├── vite.config.ts
-└── tsconfig.json
+├── vitest.config.ts
+├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
+├── tailwind.config.ts
+└── postcss.config.js
 ```
 
 ## 构建与运行
@@ -119,13 +125,20 @@ npm run electron:build # 打包为 EXE 安装包
 - 支持拖拽上传 + Electron 原生文件对话框
 - 导入后自动持久化到 IndexedDB（随项目存储）
 
-### 2. 全国省份拓扑图
+### 2. 全国省份拓扑图（三级下钻）
 
 - 预置 34 个省级行政区坐标（中国地图布局）
 - 有网元的省份自动点亮（彩色高亮+告警统计Chip）
 - 无网元的省份显示灰色虚线
-- 点击活跃省份下钻到站点级详情
 - 跨省链路以橙色虚线标注
+- **三级下钻**：省份总览 → 城市级别 → 网元级别
+  - **一级（省级总览）**：显示34省节点，活跃省份带告警统计芯片
+  - **二级（城市级别）**：点击省份进入省内城市视图，展示该省份所有地市（~290个预定义城市），有网元的城市点亮+告警芯片，无网元灰选，城市间连线从NE级链路聚合生成
+  - **三级（网元级别）**：点击城市进入该城市内具体网元节点列表，每个网元显示名称、类型和告警统计
+- **面包屑导航**：省级总览 → 某省 → 某市 三级联动
+- **城市名称归一化**：自动处理"大理市"→"大理白族自治州"、"宜良"→"昆明市"等名称差异
+- **省份节点优化**：紧凑化渲染（内边距8x14，minWidth 110），减少省级总览重叠
+- **ReactFlow 状态同步**：通过 useEffect 在省份/城市切换时同步 useNodesState，避免黑屏
 
 ### 3. 告警根因分析
 
@@ -186,4 +199,12 @@ DataSourceRegistry.getInstance().register(myAdapter);
 
 ## 源代码打包
 
-完整源代码位于 `assets/otn-alarm-tool-source.zip`，包含全部 TypeScript 源文件、配置文件、构建脚本和文档。解压后即可按上述说明进行开发和构建。
+完整源代码位于 `assets/otn-alarm-tool-source.tar.gz`，包含全部 TypeScript 源文件、配置文件、构建脚本和文档。解压后即可按上述说明进行开发和构建。
+
+## 版本历史
+
+| 版本 | 日期 | 变更内容 |
+|------|------|----------|
+| v1.1.3 | 2026-07-03 | 拓扑三级下钻（省份→城市→网元）、地市数据文件、ReactFlow状态同步修复、黑屏修复、省份节点紧凑化 |
+| v1.1.2 | 2026-06-26 | 文档修复、架构描述更新 |
+| v1.1.1 | 2026-06-22 | 首次 GitHub 同步 |
